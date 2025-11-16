@@ -18,6 +18,25 @@ DROP FUNCTION IF EXISTS toggle_like(bigint) CASCADE;
 DROP FUNCTION IF EXISTS get_unread_notifications_count(uuid) CASCADE;
 DROP FUNCTION IF EXISTS mark_notifications_as_read(uuid) CASCADE;
 DROP FUNCTION IF EXISTS get_timeline_feed(uuid, integer, integer) CASCADE;
+-- Trigger / helper functions used by triggers
+DROP FUNCTION IF EXISTS update_followers_count() CASCADE;
+DROP FUNCTION IF EXISTS update_followers_count_delete() CASCADE;
+DROP FUNCTION IF EXISTS update_posts_count() CASCADE;
+DROP FUNCTION IF EXISTS update_posts_count_delete() CASCADE;
+DROP FUNCTION IF EXISTS update_comments_count() CASCADE;
+DROP FUNCTION IF EXISTS update_comments_count_delete() CASCADE;
+DROP FUNCTION IF EXISTS create_like_notification() CASCADE;
+DROP FUNCTION IF EXISTS create_follow_notification() CASCADE;
+DROP FUNCTION IF EXISTS create_comment_notification() CASCADE;
+
+-- Additional RPCs added later
+DROP FUNCTION IF EXISTS toggle_retweet(bigint) CASCADE;
+DROP FUNCTION IF EXISTS update_presence(text) CASCADE;
+DROP FUNCTION IF EXISTS create_poll(bigint, text, text[], boolean, timestamp with time zone) CASCADE;
+DROP FUNCTION IF EXISTS vote_poll(bigint, bigint) CASCADE;
+DROP FUNCTION IF EXISTS create_media_entry(bigint, text, text) CASCADE;
+DROP FUNCTION IF EXISTS enable_2fa(text) CASCADE;
+DROP FUNCTION IF EXISTS disable_2fa() CASCADE;
 
 -- ============================================
 -- 2. ELIMINAR TRIGGERS

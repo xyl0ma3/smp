@@ -1,0 +1,20 @@
+services:
+  - type: static
+    name: codespaces-react-static
+    repo: https://github.com/Hackzero8/codespaces-react
+    branch: main
+    buildCommand: npm ci && npm run build
+    publishPath: dist
+
+  - type: web
+    name: codespaces-react-api
+    repo: https://github.com/Hackzero8/codespaces-react
+    branch: main
+    buildCommand: cd server && npm ci
+    startCommand: cd server && npm start
+    env:
+      - key: SUPABASE_URL
+        generate: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        generate: false
+    plan: free
