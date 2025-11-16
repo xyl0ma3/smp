@@ -26,12 +26,16 @@ export default function Timeline({ onOpenProfile }) {
       const user = await getAuthUser()
       setIsAuthenticated(!!user)
       
-      logger.debug(TAG, user ? 'Usuario autenticado' : 'Usuario no autenticado', { userId: user?.id })
+      if (user) {
+        logger.debug(TAG, 'Usuario autenticado', { userId: user.id })
+      } else {
+        logger.debug(TAG, 'Usuario no autenticado, usando posts públicos')
+      }
       
       // Obtener posts
       let result
       if (user) {
-        logger.debug(TAG, 'Obteniendo timeline personalizado del usuario')
+        logger.debug(TAG, 'Obteniendo timeline del usuario')
         result = await fetchUserTimeline(user.id, 50, 0)
       } else {
         logger.debug(TAG, 'Obteniendo posts públicos')
@@ -39,20 +43,26 @@ export default function Timeline({ onOpenProfile }) {
       }
       
       if (!result.success) {
-        logger.error(TAG, 'Error al obtener posts', result.error)
-        setError('No se pudieron cargar los posts')
+        logger.error(TAG, 'Error al obtener posts', {
+          success: result.success,
+          error: result.error?.message || result.error
+        })
+        setError('No se pudieron cargar los posts. Intenta recargar.')
         setPosts([])
         return
       }
       
       // Normalizar datos
       const normalized = normalizePostData(result.data)
-      logger.info(TAG, `Posts cargados correctamente: ${normalized.length}`, { count: normalized.length })
+      logger.info(TAG, `Posts cargados correctamente`, { count: normalized.length, isAuthenticated: !!user })
       
       setPosts(normalized)
       setError(null)
     } catch (e) {
-      logger.error(TAG, 'Excepción al cargar posts', e)
+      logger.error(TAG, 'Excepción al cargar posts', {
+        message: e.message,
+        stack: e.stack
+      })
       setError('Error al cargar posts')
       setPosts([])
     } finally {

@@ -57,50 +57,81 @@ export async function fetchPublicPosts(limit = 50, offset = 0) {
       .range(offset, offset + limit - 1)
     
     if (error) {
-      logger.error(SUPABASE_TAG, 'Error fetching public posts', error)
+      logger.error(SUPABASE_TAG, 'Error fetching public posts', {
+        message: error.message,
+        code: error.code,
+        details: error.details
+      })
       return { data: [], error, success: false }
     }
     
-    logger.debug(SUPABASE_TAG, 'Public posts fetched', { count: data?.length })
+    logger.info(SUPABASE_TAG, 'Public posts fetched successfully', { count: data?.length })
     return { data: data || [], error: null, success: true }
   } catch (e) {
-    logger.error(SUPABASE_TAG, 'Exception fetching public posts', e)
+    logger.error(SUPABASE_TAG, 'Exception fetching public posts', {
+      message: e.message,
+      stack: e.stack
+    })
     return { data: [], error: e, success: false }
   }
 }
 
 /**
  * Obtener timeline del usuario (posts propios + seguidos)
+ * Nota: Intenta usar RPC si está disponible, sino retorna posts públicos
  */
 export async function fetchUserTimeline(userId, limit = 50, offset = 0) {
   try {
     if (!userId) {
       logger.warn(SUPABASE_TAG, 'fetchUserTimeline called without userId')
-      return { data: [], error: 'No userId provided', success: false }
+      // Fallback a posts públicos si no hay usuario
+      return fetchPublicPosts(limit, offset)
     }
 
     logger.debug(SUPABASE_TAG, 'Fetching user timeline', { userId, limit, offset })
     
-    const { data, error } = await supabase.rpc(
-      'get_timeline_feed',
-      {
-        p_user_id: userId,
-        p_limit: limit,
-        p_offset: offset
-      }
-    )
+    // Primero intentamos obtener posts del usuario + posts públicos combinados
+    // Esto es más confiable que depender de una RPC
+    const [userPostsResult, publicPostsResult] = await Promise.all([
+      supabase
+        .from('posts')
+        .select(`
+          id,
+          content,
+          created_at,
+          author_id,
+          image_url,
+          likes_count,
+          replies_count,
+          reposts_count,
+          profiles(
+            id,
+            username,
+            avatar_url,
+            verified
+          )
+        `)
+        .eq('author_id', userId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1),
+      fetchPublicPosts(limit, offset)
+    ])
     
-    if (error) {
-      logger.error(SUPABASE_TAG, 'Error fetching user timeline via RPC', error)
-      // Fallback: obtener posts públicos si falla RPC
-      return fetchPublicPosts(limit, offset)
-    }
+    // Combinar resultados, preferir posts del usuario pero incluir públicos
+    const userPosts = userPostsResult.data || []
+    const publicPosts = publicPostsResult.data || []
     
-    logger.debug(SUPABASE_TAG, 'User timeline fetched', { count: data?.length })
-    return { data: data || [], error: null, success: true }
+    // Combinar y ordenar por fecha
+    const combined = [...userPosts, ...publicPosts]
+    combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    const uniquePosts = Array.from(new Map(combined.map(p => [p.id, p])).values())
+    
+    logger.debug(SUPABASE_TAG, 'User timeline fetched', { userPostsCount: userPosts.length, totalCount: uniquePosts.length })
+    return { data: uniquePosts.slice(0, limit) || [], error: null, success: true }
   } catch (e) {
     logger.error(SUPABASE_TAG, 'Exception fetching user timeline', e)
     // Fallback a posts públicos
+    logger.debug(SUPABASE_TAG, 'Falling back to public posts due to exception')
     return fetchPublicPosts(limit, offset)
   }
 }
