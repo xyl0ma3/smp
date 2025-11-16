@@ -11,42 +11,62 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null)
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [isFollowing, setIsFollowing] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [likedPosts, setLikedPosts] = useState(new Set())
 
   useEffect(() => {
-    if (!username) return
+    if (!username) {
+      setError('Usuario no especificado')
+      setLoading(false)
+      return
+    }
     fetchProfile()
-    fetchPosts()
-    if (currentUser) fetchFollowStatus()
   }, [username, currentUser])
 
   const fetchProfile = async () => {
     try {
       setLoading(true)
+      setError(null)
+      
+      // Buscar por username
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('username', username)
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Profile fetch error:', error)
+        setError(`Usuario @${username} no encontrado`)
+        setProfile(null)
+        return
+      }
+
+      if (!data) {
+        setError(`Usuario @${username} no encontrado`)
+        setProfile(null)
+        return
+      }
+
       setProfile(data)
+      fetchPosts(data.id)
+      if (currentUser) fetchFollowStatus(data.id)
     } catch (error) {
       console.error('Error fetching profile:', error)
+      setError('Error al cargar el perfil')
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (profileId) => {
     try {
-      if (!profile) return
       const { data, error } = await supabase
         .from('posts')
         .select('*')
-        .eq('author_id', profile.id)
+        .eq('author_id', profileId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -99,7 +119,7 @@ export default function ProfilePage() {
           .from('follows')
           .insert({
             follower_id: currentUser.id,
-            following_id: userId
+            following_id: profile.id
           })
       }
 
@@ -151,15 +171,21 @@ export default function ProfilePage() {
     )
   }
 
-  if (!profile) {
+  if (error || !profile) {
     return (
-      <div className="w-full h-full bg-white dark:bg-twitter-900 flex items-center justify-center">
-        <div className="text-gray-500">Perfil no encontrado</div>
+      <div className="w-full h-full bg-white dark:bg-twitter-900 flex flex-col items-center justify-center gap-4 p-6">
+        <div className="text-xl font-bold text-gray-900 dark:text-white">⚠️ {error || 'Perfil no encontrado'}</div>
+        <p className="text-gray-600 dark:text-gray-400 text-center">
+          El usuario <span className="font-semibold">@{username}</span> no existe o ha sido eliminado.
+        </p>
+        <a href="/feed" className="text-twitter-600 hover:underline font-medium">
+          ← Volver al inicio
+        </a>
       </div>
     )
   }
 
-  const isOwnProfile = currentUser?.id === userId
+  const isOwnProfile = currentUser?.id === profile?.id
 
   return (
     <div className="w-full h-full bg-white dark:bg-twitter-900 flex flex-col overflow-hidden">

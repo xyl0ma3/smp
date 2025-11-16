@@ -38,6 +38,7 @@ function App() {
           <Route path="/notifications" element={<RequireAuth><NotificationsPage user={user} /></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth><SettingsPage user={user} /></RequireAuth>} />
           <Route path="/@:username" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+          <Route path="/profile/:username" element={<RequireAuth><ProfilePage /></RequireAuth>} />
           <Route path="/compose" element={<RequireAuth><CreatePost user={user} onClose={() => window.history.back()} onPosted={() => window.history.back()} /></RequireAuth>} />
           <Route path="/signup" element={<Auth onUser={(u) => { setUser(u); }} />} />
           <Route path="/ping" element={<Ping />} />
