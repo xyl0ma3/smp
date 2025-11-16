@@ -1,11 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Home, Search, Bell, Bookmark, Heart, User, Settings } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import {
+  Home,
+  Search,
+  Bell,
+  Bookmark,
+  Heart,
+  User,
+  Settings,
+  LogOut,
+  MoreHorizontal,
+  Share2,
+  Flag
+} from 'lucide-react'
 
-export default function DropdownMenu({ page, setPage }) {
+export default function DropdownMenu({ 
+  items = [],
+  align = 'left',
+  trigger,
+  onSelect,
+  className = ''
+}) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
-  const navigate = useNavigate()
 
   useEffect(() => {
     function onDoc(e) {
@@ -22,51 +38,54 @@ export default function DropdownMenu({ page, setPage }) {
     }
   }, [])
 
-  const items = [
-    { icon: Home, label: 'Inicio', page: 'feed', path: '/feed' },
-    { icon: Search, label: 'Explorar', page: 'search', path: '/search' },
-    { icon: Bell, label: 'Notificaciones', page: 'notifications', path: '/notifications' },
-    { icon: User, label: 'Perfil', page: 'profile' },
-    { icon: Heart, label: 'Mis Likes', page: 'likes' },
-    { icon: Bookmark, label: 'Guardados', page: 'saved' },
-    { icon: Settings, label: 'Ajustes', page: 'settings' },
-  ]
+  const handleSelect = (item) => {
+    setOpen(false)
+    onSelect?.(item)
+  }
 
-  useEffect(() => {
-    if (open) {
-      // Focus first element for keyboard users
-      const btn = ref.current?.querySelector('[data-first]')
-      btn?.focus()
-    }
-  }, [open])
+  const alignmentClass = align === 'right' ? 'right-0' : 'left-0'
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((s) => !s)}
-        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-twitter-800 transition-colors"
-        title="Menu"
-      >
-        <span className="text-xl">☰</span>
-      </button>
+    <div className={`relative ${className}`} ref={ref}>
+      {/* Trigger button */}
+      {trigger ? (
+        <button onClick={() => setOpen((s) => !s)} className="hover:bg-gray-100 dark:hover:bg-twitter-800 rounded-full p-2 transition-colors">
+          {trigger}
+        </button>
+      ) : (
+        <button
+          onClick={() => setOpen((s) => !s)}
+          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-twitter-800 transition-colors text-gray-500 hover:text-twitter-600 dark:hover:text-twitter-400"
+          title="Menu"
+        >
+          <MoreHorizontal size={18} />
+        </button>
+      )}
 
+      {/* Dropdown menu */}
       {open && (
-        <div className="absolute left-0 top-10 z-50 w-52 bg-white dark:bg-twitter-900 border border-gray-200 dark:border-twitter-800 rounded-lg shadow-lg py-2 menu-anim">
-            {items.map(({ icon: Icon, label, page: itemPage, path }, i) => (
-            <button
-              key={itemPage}
-              onClick={() => {
-                setOpen(false)
-                setPage && setPage(itemPage)
-                try { navigate(path ?? (itemPage === 'feed' ? '/' : `/${itemPage}`)) } catch (e) {}
-              }}
-              data-first={i === 0}
-              className="w-full px-3 py-2 text-left flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-twitter-800"
-            >
-              <Icon size={18} />
-              <span>{label}</span>
-            </button>
-          ))}
+        <div className={`absolute ${alignmentClass} top-10 z-50 w-56 bg-white dark:bg-twitter-900 border border-gray-200 dark:border-twitter-800 rounded-lg shadow-xl py-2 menu-anim`}>
+          {items.length === 0 ? (
+            <div className="px-4 py-3 text-gray-500 dark:text-gray-400 text-sm">
+              Sin opciones disponibles
+            </div>
+          ) : (
+            items.map((item, index) => (
+              <button
+                key={item.id || index}
+                onClick={() => handleSelect(item)}
+                className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors text-sm font-medium
+                  ${item.danger
+                    ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900 hover:bg-opacity-20'
+                    : 'text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-twitter-800'
+                  }
+                `}
+              >
+                {item.icon && <item.icon size={16} />}
+                <span>{item.label}</span>
+              </button>
+            ))
+          )}
         </div>
       )}
     </div>

@@ -1,142 +1,103 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../supabase'
-import { Search as SearchIcon, Loader, Trash2, Clock } from 'lucide-react'
+import useSearch from '../hooks/useSearch'
+import useAuth from '../hooks/useAuth'
+import Avatar from '../components/Avatar'
+import { Search as SearchIcon, Loader, Trash2, Clock, Sparkles } from 'lucide-react'
 
-export default function SearchPage({ user, onProfile }) {
-  const [query, setQuery] = useState('')
-  const [profiles, setProfiles] = useState([])
-  const [posts, setPosts] = useState([])
-  const [loading, setLoading] = useState(false)
+export default function SearchPage({ onProfile, onPostClick }) {
+  const { user } = useAuth()
+  const { search, searchUsers, searchPosts, results, loading, query: searchQuery, clearResults } = useSearch()
+  const [localQuery, setLocalQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const [searchHistory, setSearchHistory] = useState([])
   const [showHistory, setShowHistory] = useState(true)
 
   useEffect(() => {
-    if (user) fetchSearchHistory()
-  }, [user])
-
-  const fetchSearchHistory = async () => {
-    if (!user) return
-    try {
-      const { data } = await supabase
-        .from('search_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      setSearchHistory(data || [])
-    } catch (error) {
-      console.error('Error fetching search history:', error)
+    // Load search history from localStorage
+    const history = localStorage.getItem('searchHistory')
+    if (history) {
+      try {
+        setSearchHistory(JSON.parse(history))
+      } catch (e) {
+        console.error('Error loading search history:', e)
+      }
     }
+  }, [])
+
+  const saveToHistory = (query) => {
+    if (!query.trim()) return
+    const updated = [
+      { id: Date.now(), query: query.trim(), timestamp: new Date().toISOString() },
+      ...searchHistory.filter(h => h.query !== query.trim())
+    ].slice(0, 15)
+    setSearchHistory(updated)
+    localStorage.setItem('searchHistory', JSON.stringify(updated))
   }
 
-  const doSearch = async (searchQuery) => {
-    if (!searchQuery.trim()) {
-      setProfiles([])
-      setPosts([])
-      return
-    }
-
-    setLoading(true)
-    try {
-      const q = searchQuery.trim()
-
-      // Save search to history
-      if (user) {
-        await supabase.from('search_history').insert({
-          user_id: user.id,
-          query: q,
-          type: activeTab
-        })
-      }
-
-      // Search users
-      if (activeTab === 'all' || activeTab === 'people') {
-        const { data: profs } = await supabase
-          .rpc('search_users', { search_query: q, limit_count: 20 })
-
-        setProfiles(profs || [])
-      } else {
-        setProfiles([])
-      }
-
-      // Search posts
-      if (activeTab === 'all' || activeTab === 'posts') {
-        const { data: psts } = await supabase
-          .rpc('search_posts', { search_query: q, limit_count: 30 })
-
-        setPosts(psts || [])
-      } else {
-        setPosts([])
-      }
-
-      setShowHistory(false)
-    } catch (error) {
-      console.error('Error searching:', error)
-      // Fallback to simple search
-      if (activeTab === 'all' || activeTab === 'people') {
-        const { data: profs } = await supabase
-          .from('profiles')
-          .select('*')
-          .ilike('username', `%${q}%`)
-          .limit(20)
-        setProfiles(profs || [])
-      }
-
-      if (activeTab === 'all' || activeTab === 'posts') {
-        const { data: psts } = await supabase
-          .from('posts')
-          .select('*, profiles(username, avatar_url)')
-          .ilike('content', `%${q}%`)
-          .order('created_at', { ascending: false })
-          .limit(30)
-        setPosts(psts || [])
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault()
-    doSearch(query)
+    if (!localQuery.trim()) return
+
+    saveToHistory(localQuery)
+    setShowHistory(false)
+
+    switch (activeTab) {
+      case 'people':
+        await searchUsers(localQuery)
+        break
+      case 'posts':
+        await searchPosts(localQuery)
+        break
+      default:
+        await search(localQuery)
+    }
   }
 
   const handleHistoryClick = (historyQuery) => {
-    setQuery(historyQuery)
-    doSearch(historyQuery)
+    setLocalQuery(historyQuery)
+    saveToHistory(historyQuery)
+    setShowHistory(false)
   }
 
-  const deleteSearchHistory = async (id) => {
-    try {
-      await supabase.from('search_history').delete().eq('id', id)
-      fetchSearchHistory()
-    } catch (error) {
-      console.error('Error deleting search history:', error)
-    }
+  const deleteSearchHistory = (id) => {
+    const updated = searchHistory.filter(h => h.id !== id)
+    setSearchHistory(updated)
+    localStorage.setItem('searchHistory', JSON.stringify(updated))
   }
+
+  const clearSearchHistory = () => {
+    setSearchHistory([])
+    localStorage.removeItem('searchHistory')
+  }
+
+  const hasResults = results.users?.length > 0 || results.posts?.length > 0
 
   return (
     <div className="w-full h-full bg-white dark:bg-twitter-900 flex flex-col">
       {/* Search Header */}
-      <div className="sticky top-0 border-b border-gray-200 dark:border-twitter-800 p-4 bg-white dark:bg-twitter-900 z-10">
+      <div className="sticky top-0 border-b border-gray-200 dark:border-twitter-800 p-4 bg-white dark:bg-twitter-900 z-10 space-y-4">
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="flex-1 relative">
             <SearchIcon className="absolute left-4 top-3 text-gray-500" size={20} />
             <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => setShowHistory(true)}
-              placeholder="Buscar usuarios, posts..."
-              className="w-full pl-12 pr-4 py-3 rounded-full bg-gray-100 dark:bg-twitter-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-twitter-500"
+              value={localQuery}
+              onChange={(e) => {
+                setLocalQuery(e.target.value)
+                if (!e.target.value.trim()) {
+                  clearResults()
+                  setShowHistory(true)
+                }
+              }}
+              onFocus={() => !localQuery && setShowHistory(true)}
+              placeholder="Busca usuarios, posts, hashtags..."
+              className="w-full pl-12 pr-4 py-3 rounded-full bg-gray-100 dark:bg-twitter-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-twitter-500 transition-all"
             />
           </div>
         </form>
 
-        {/* Tabs */}
-        {(profiles.length > 0 || posts.length > 0) && (
-          <div className="flex gap-4 mt-4 border-b border-gray-200 dark:border-twitter-800">
+        {/* Tabs - only show if we have results */}
+        {hasResults && (
+          <div className="flex gap-6 border-b border-gray-200 dark:border-twitter-800 -mx-4 px-4 overflow-x-auto">
             {[
               { id: 'all', label: 'Todo' },
               { id: 'people', label: 'Personas' },
@@ -145,9 +106,9 @@ export default function SearchPage({ user, onProfile }) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-3 font-semibold border-b-2 transition-colors ${
+                className={`px-2 py-3 font-semibold border-b-2 whitespace-nowrap transition-colors ${
                   activeTab === tab.id
-                    ? 'border-twitter-500 text-twitter-600 dark:text-twitter-400'
+                    ? 'border-twitter-600 text-twitter-600 dark:text-twitter-400'
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
@@ -162,13 +123,27 @@ export default function SearchPage({ user, onProfile }) {
       <div className="flex-1 overflow-y-auto">
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <Loader className="animate-spin text-twitter-500" size={32} />
+            <div className="text-center">
+              <Loader className="animate-spin text-twitter-600 mx-auto mb-4" size={32} />
+              <p className="text-gray-500 dark:text-gray-400">Buscando...</p>
+            </div>
           </div>
         )}
 
-        {!loading && showHistory && !query && searchHistory.length > 0 && (
-          <div className="p-4">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Búsquedas recientes</h3>
+        {!loading && showHistory && !localQuery && searchHistory.length > 0 && (
+          <div className="p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Clock size={20} />
+                Búsquedas recientes
+              </h3>
+              <button
+                onClick={clearSearchHistory}
+                className="text-sm text-twitter-600 dark:text-twitter-400 hover:text-twitter-700 dark:hover:text-twitter-300 font-medium"
+              >
+                Limpiar
+              </button>
+            </div>
             <div className="space-y-2">
               {searchHistory.map(item => (
                 <div
@@ -177,19 +152,19 @@ export default function SearchPage({ user, onProfile }) {
                 >
                   <button
                     onClick={() => handleHistoryClick(item.query)}
-                    className="flex-1 text-left flex items-center gap-3"
+                    className="flex-1 text-left flex items-center gap-3 min-w-0"
                   >
-                    <Clock className="text-gray-400" size={18} />
-                    <span className="text-gray-900 dark:text-white">{item.query}</span>
+                    <Clock className="text-gray-400 flex-shrink-0" size={18} />
+                    <span className="text-gray-900 dark:text-white truncate">{item.query}</span>
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       deleteSearchHistory(item.id)
                     }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="p-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                   >
-                    <Trash2 className="text-gray-400 hover:text-red-500" size={18} />
+                    <Trash2 className="text-gray-400 hover:text-red-500" size={16} />
                   </button>
                 </div>
               ))}
@@ -197,39 +172,58 @@ export default function SearchPage({ user, onProfile }) {
           </div>
         )}
 
-        {!loading && !showHistory && profiles.length === 0 && posts.length === 0 && query && (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+        {!loading && !localQuery && !showHistory && (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-500 dark:text-gray-400 px-4">
+            <Sparkles size={48} className="mb-4 opacity-50" />
+            <p className="text-lg font-semibold">¿En qué estás pensando?</p>
+            <p className="text-sm mt-2">Busca usuarios, posts o hashtags</p>
+          </div>
+        )}
+
+        {!loading && localQuery && !hasResults && (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-500 dark:text-gray-400 px-4">
             <SearchIcon size={48} className="mb-4 opacity-50" />
-            <p>No se encontraron resultados para "{query}"</p>
+            <p className="text-lg font-semibold">Sin resultados</p>
+            <p className="text-sm mt-2">No encontramos nada para "{localQuery}"</p>
           </div>
         )}
 
         {/* People Section */}
-        {(activeTab === 'all' || activeTab === 'people') && profiles.length > 0 && (
+        {!loading && (activeTab === 'all' || activeTab === 'people') && results.users?.length > 0 && (
           <div className="border-b border-gray-200 dark:border-twitter-800">
             {activeTab === 'all' && (
-              <div className="px-4 py-3 font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-twitter-800">
+              <div className="sticky top-0 px-4 py-3 font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-twitter-800 border-b border-gray-200 dark:border-twitter-800">
                 Personas
               </div>
             )}
             <div className="divide-y divide-gray-200 dark:divide-twitter-800">
-              {profiles.map(profile => (
+              {results.users.map(profile => (
                 <button
                   key={profile.id}
-                  onClick={() => onProfile && onProfile(profile.id)}
-                  className="w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-twitter-800 transition-colors flex items-center gap-3"
+                  onClick={() => onProfile?.(profile.id)}
+                  className="w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-twitter-800 transition-colors flex items-start gap-3"
                 >
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-twitter-500 to-twitter-600 text-white flex items-center justify-center font-bold">
-                    {profile.avatar_url ? (
-                      <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover rounded-full" />
-                    ) : (
-                      profile.username?.[0]?.toUpperCase()
-                    )}
-                  </div>
+                  <Avatar
+                    src={profile.avatar_url}
+                    alt={profile.username}
+                    size={48}
+                  />
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 dark:text-white truncate">{profile.username}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{profile.bio}</p>
-                    <p className="text-xs text-gray-500 mt-1">{profile.followers_count} seguidores</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-gray-900 dark:text-white truncate">{profile.username}</p>
+                      {profile.is_verified && (
+                        <span className="text-twitter-600 text-xs">✓</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">@{profile.username?.toLowerCase()}</p>
+                    {profile.bio && (
+                      <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 mt-1">
+                        {profile.bio}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      {profile.followers_count || 0} seguidores
+                    </p>
                   </div>
                 </button>
               ))}
@@ -238,34 +232,49 @@ export default function SearchPage({ user, onProfile }) {
         )}
 
         {/* Posts Section */}
-        {(activeTab === 'all' || activeTab === 'posts') && posts.length > 0 && (
+        {!loading && (activeTab === 'all' || activeTab === 'posts') && results.posts?.length > 0 && (
           <div>
             {activeTab === 'all' && (
-              <div className="px-4 py-3 font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-twitter-800">
+              <div className="sticky top-0 px-4 py-3 font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-twitter-800 border-b border-gray-200 dark:border-twitter-800">
                 Posts
               </div>
             )}
             <div className="divide-y divide-gray-200 dark:divide-twitter-800">
-              {posts.map(post => (
-                <div key={post.id} className="p-4 hover:bg-gray-50 dark:hover:bg-twitter-800 transition-colors cursor-pointer border-b border-gray-200 dark:border-twitter-800">
+              {results.posts.map(post => (
+                <button
+                  key={post.id}
+                  onClick={() => onPostClick?.(post.id)}
+                  className="w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-twitter-800 transition-colors"
+                >
                   <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-twitter-500 to-twitter-600 text-white flex items-center justify-center font-bold">
-                      {post.author_avatar ? (
-                        <img src={post.author_avatar} alt={post.author_username} className="w-full h-full object-cover rounded-full" />
-                      ) : (
-                        post.author_username?.[0]?.toUpperCase()
-                      )}
-                    </div>
+                    <Avatar
+                      src={post.author?.avatar_url || post.profiles?.avatar_url}
+                      alt={post.author?.username || post.profiles?.username}
+                      size={48}
+                    />
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 dark:text-white">{post.author_username}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {new Date(post.created_at).toLocaleDateString('es-ES')}
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-gray-900 dark:text-white">
+                          {post.author?.username || post.profiles?.username}
+                        </p>
+                        <span className="text-gray-500">·</span>
+                        <p className="text-sm text-gray-500">
+                          {new Date(post.created_at).toLocaleDateString('es-ES', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                      <p className="text-gray-700 dark:text-gray-300 mt-2 line-clamp-3">
+                        {post.content}
                       </p>
-                      <p className="text-gray-900 dark:text-white mt-2">{post.content}</p>
-                      <p className="text-sm text-gray-500 mt-2">{post.likes_count} me gusta</p>
+                      <div className="flex gap-4 text-gray-500 text-sm mt-2">
+                        <span>{post.likes_count || 0} me gusta</span>
+                        <span>{post.comments_count || 0} comentarios</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>

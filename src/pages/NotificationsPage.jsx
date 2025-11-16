@@ -1,97 +1,13 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../supabase'
-import { Heart, User, MessageSquare, Repeat2, Loader } from 'lucide-react'
+import { useState } from 'react'
+import useNotifications from '../hooks/useNotifications'
+import useAuth from '../hooks/useAuth'
+import Avatar from '../components/Avatar'
+import { Heart, User, MessageSqule, Repeat2, Loader, Bell } from 'lucide-react'
 
-export default function NotificationsPage({ user, onProfile }) {
-  const [notifications, setNotifications] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [unreadCount, setUnreadCount] = useState(0)
+export default function NotificationsPage({ onProfile }) {
+  const { user } = useAuth()
+  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications(user?.id)
   const [activeFilter, setActiveFilter] = useState('all')
-
-  useEffect(() => {
-    if (user) {
-      fetchNotifications()
-      const interval = setInterval(() => {
-        fetchNotifications()
-      }, 5000)
-      return () => clearInterval(interval)
-    }
-  }, [user])
-
-  const fetchNotifications = async () => {
-    if (!user) return
-
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('notifications')
-        .select(`
-          *,
-          actor:actor_id(id, username, avatar_url),
-          post:post_id(id, content)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-
-      setNotifications(data || [])
-
-      // Count unread
-      const unread = data?.filter(n => !n.read).length || 0
-      setUnreadCount(unread)
-    } catch (error) {
-      console.error('Error fetching notifications:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const markAsRead = async (notificationId) => {
-    try {
-      await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', notificationId)
-
-      setNotifications(prev =>
-        prev.map(n =>
-          n.id === notificationId ? { ...n, read: true } : n
-        )
-      )
-      setUnreadCount(Math.max(0, unreadCount - 1))
-    } catch (error) {
-      console.error('Error marking notification as read:', error)
-    }
-  }
-
-  const markAllAsRead = async () => {
-    try {
-      await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('user_id', user.id)
-        .eq('read', false)
-
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-      setUnreadCount(0)
-    } catch (error) {
-      console.error('Error marking all as read:', error)
-    }
-  }
-
-  const deleteNotification = async (notificationId) => {
-    try {
-      await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notificationId)
-
-      setNotifications(prev => prev.filter(n => n.id !== notificationId))
-    } catch (error) {
-      console.error('Error deleting notification:', error)
-    }
-  }
 
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -100,11 +16,13 @@ export default function NotificationsPage({ user, onProfile }) {
       case 'follow':
         return <User size={18} className="text-blue-500" />
       case 'reply':
-        return <MessageSquare size={18} className="text-green-500" />
+        return <MessageSqule size={18} className="text-green-500" />
       case 'repost':
         return <Repeat2 size={18} className="text-purple-500" />
+      case 'mention':
+        return <User size={18} className="text-yellow-500" />
       default:
-        return <User size={18} className="text-twitter-500" />
+        return <Bell size={18} className="text-twitter-500" />
     }
   }
 
@@ -210,9 +128,16 @@ export default function NotificationsPage({ user, onProfile }) {
                 }`}
               >
                 <div className="flex gap-3">
-                  {/* Icon */}
-                  <div className="flex-shrink-0 flex items-start justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-twitter-800">
-                    {getNotificationIcon(notification.type)}
+                  {/* Icon and Avatar */}
+                  <div className="relative flex-shrink-0">
+                    <Avatar
+                      src={notification.actor?.avatar_url}
+                      alt={notification.actor?.username}
+                      size={40}
+                    />
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gray-100 dark:bg-twitter-800 flex items-center justify-center">
+                      {getNotificationIcon(notification.type)}
+                    </div>
                   </div>
 
                   {/* Content */}
@@ -222,18 +147,9 @@ export default function NotificationsPage({ user, onProfile }) {
                         e.stopPropagation()
                         onProfile && onProfile(notification.actor_id)
                       }}
-                      className="flex items-center gap-2 mb-1 hover:underline"
+                      className="font-bold text-gray-900 dark:text-white hover:underline"
                     >
-                      {notification.actor?.avatar_url && (
-                        <img
-                          src={notification.actor.avatar_url}
-                          alt={notification.actor?.username}
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                      )}
-                      <span className="font-bold text-gray-900 dark:text-white">
-                        {notification.actor?.username}
-                      </span>
+                      {notification.actor?.username}
                     </button>
 
                     <p className="text-gray-600 dark:text-gray-400 text-sm">
@@ -241,7 +157,7 @@ export default function NotificationsPage({ user, onProfile }) {
                     </p>
 
                     {notification.post?.content && (
-                      <p className="mt-2 text-gray-900 dark:text-white text-sm line-clamp-2">
+                      <p className="mt-2 text-gray-900 dark:text-white text-sm line-clamp-2 bg-gray-100 dark:bg-twitter-800 p-2 rounded">
                         {notification.post.content}
                       </p>
                     )}
@@ -257,22 +173,10 @@ export default function NotificationsPage({ user, onProfile }) {
                     </p>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex-shrink-0 flex gap-2">
-                    {!notification.read && (
-                      <div className="w-2 h-2 rounded-full bg-twitter-500 mt-2" />
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        deleteNotification(notification.id)
-                      }}
-                      className="text-gray-400 hover:text-red-500 transition-colors p-2"
-                      title="Eliminar notificación"
-                    >
-                      ✕
-                    </button>
-                  </div>
+                  {/* Indicator */}
+                  {!notification.read && (
+                    <div className="flex-shrink-0 w-2 h-2 rounded-full bg-twitter-500 mt-2" />
+                  )}
                 </div>
               </div>
             ))}
