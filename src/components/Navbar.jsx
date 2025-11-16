@@ -1,7 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Home, Search, Bell, Mail, User, MoreHorizontal, Bookmark } from 'lucide-react'
-import ThemeToggle from './ThemeToggle'
 import NavigationMenu from './NavigationMenu'
 
 export default function Navbar({ user, setPage, onLogout }) {
@@ -52,8 +51,6 @@ export default function Navbar({ user, setPage, onLogout }) {
               <span className="hidden md:inline text-sm">{user?.email ? user.email.split('@')[0] : 'Perfil'}</span>
             </button>
           </div>
-          {/* Theme toggle */}
-          <ThemeToggle />
         </div>
       </div>
     </nav>

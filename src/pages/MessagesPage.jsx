@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import useAuth from '../hooks/useAuth';
-import ChatWindow from './ChatWindow';
+import ChatWindow from '../components/ChatWindow';
 import { Search, MessageCirclePlus, X } from 'lucide-react';
 
 export default function MessagesPage() {
