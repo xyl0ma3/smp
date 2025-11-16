@@ -1,37 +1,58 @@
--- ============================================
--- HABILITAR RLS EN TODAS LAS TABLAS
--- ============================================
 
--- Habilitar RLS en la tabla comments
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 
--- Habilitar RLS en la tabla blocks
 ALTER TABLE blocks ENABLE ROW LEVEL SECURITY;
 
--- Habilitar RLS en la tabla notifications
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
--- Habilitar RLS en la tabla search_history
+-- POLÍTICAS PARA TABLA: BOOKMARKS
+-- ============================================
+
+-- Habilitar RLS en bookmarks
+ALTER TABLE IF EXISTS bookmarks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their bookmarks"
+ON bookmarks FOR SELECT
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create bookmarks"
+ON bookmarks FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their bookmarks"
+ON bookmarks FOR DELETE
+USING (auth.uid() = user_id);
+
+-- POLÍTICAS PARA TABLA: REPORTS
+-- ============================================
+
+ALTER TABLE IF EXISTS reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can create reports"
+ON reports FOR INSERT
+WITH CHECK (auth.uid() = reporter_id);
+
+CREATE POLICY "Admin can view reports"
+ON reports FOR SELECT
+USING (true);
+
+CREATE POLICY "Admin can update reports"
+ON reports FOR UPDATE
+USING (true)
+WITH CHECK (true);
+
 ALTER TABLE search_history ENABLE ROW LEVEL SECURITY;
 
--- Habilitar RLS en la tabla user_settings
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 
--- Habilitar RLS en la tabla profiles (si no está habilitado)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- Habilitar RLS en la tabla posts (si no está habilitado)
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 
--- Habilitar RLS en la tabla follows (si no está habilitado)
 ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
 
--- Habilitar RLS en la tabla likes (si no está habilitado)
 ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
 
--- ============================================
--- POLÍTICAS PARA TABLA: COMMENTS
--- ============================================
 
 -- Ver comentarios: todos pueden ver
 CREATE POLICY "Comments are viewable by everyone"

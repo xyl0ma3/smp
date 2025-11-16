@@ -646,6 +646,53 @@ export const likeAPI = {
 }
 
 // ============================================
+// BOOKMARKS / REPORTS API
+// ============================================
+
+export const bookmarksAPI = {
+  listForUser: async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('bookmarks')
+        .select('*, post:post_id(*)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    } catch (err) {
+      console.error('Error listing bookmarks:', err)
+      return []
+    }
+  }
+}
+
+export const reportsAPI = {
+  listReports: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('*, reporter:reporter_id(id, username, avatar_url), post:post_id(id, content)')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    } catch (err) {
+      console.error('Error listing reports:', err)
+      return []
+    }
+  },
+  updateStatus: async (reportId, status) => {
+    try {
+      const { error } = await supabase.from('reports').update({ status }).eq('id', reportId)
+      if (error) throw error
+      return true
+    } catch (err) {
+      console.error('Error updating report status:', err)
+      return false
+    }
+  }
+}
+
+// ============================================
 // STORAGE UTILITIES
 // ============================================
 
