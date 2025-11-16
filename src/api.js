@@ -693,6 +693,82 @@ export const reportsAPI = {
 }
 
 // ============================================
+// PRESENCE / RETWEET / POLLS / MEDIA
+// ============================================
+
+export const presenceAPI = {
+  update: async (status) => {
+    try {
+      const { error } = await supabase.rpc('update_presence', { p_status: status })
+      if (error) throw error
+      return true
+    } catch (err) {
+      console.error('Error updating presence:', err)
+      return false
+    }
+  }
+}
+
+export const retweetAPI = {
+  toggle: async (postId) => {
+    try {
+      const { data, error } = await supabase.rpc('toggle_retweet', { p_post_id: postId })
+      if (error) throw error
+      return data && data[0] ? data[0] : { retweeted: false, retweets_count: 0 }
+    } catch (err) {
+      console.error('Error toggling retweet:', err)
+      return { retweeted: false, retweets_count: 0 }
+    }
+  }
+}
+
+export const pollsAPI = {
+  create: async (postId, question, options = [], multiple = false, expiresAt = null) => {
+    try {
+      const { data, error } = await supabase.rpc('create_poll', { p_post_id: postId, p_question: question, p_options: options, p_multiple: multiple, p_expires_at: expiresAt })
+      if (error) throw error
+      return data
+    } catch (err) {
+      console.error('Error creating poll:', err)
+      return null
+    }
+  },
+  vote: async (pollId, optionId) => {
+    try {
+      const { error } = await supabase.rpc('vote_poll', { p_poll_id: pollId, p_option_id: optionId })
+      if (error) throw error
+      return true
+    } catch (err) {
+      console.error('Error voting poll:', err)
+      return false
+    }
+  },
+  get: async (pollId) => {
+    try {
+      const { data, error } = await supabase.from('polls').select('*, options:poll_options(*)').eq('id', pollId).single()
+      if (error && error.code !== 'PGRST116') throw error
+      return data || null
+    } catch (err) {
+      console.error('Error fetching poll:', err)
+      return null
+    }
+  }
+}
+
+export const mediaAPI = {
+  createEntry: async (postId, url, mediaType = 'image') => {
+    try {
+      const { data, error } = await supabase.rpc('create_media_entry', { p_post_id: postId, p_url: url, p_media_type: mediaType })
+      if (error) throw error
+      return data
+    } catch (err) {
+      console.error('Error creating media entry:', err)
+      return null
+    }
+  }
+}
+
+// ============================================
 // STORAGE UTILITIES
 // ============================================
 

@@ -597,3 +597,195 @@ EXECUTE FUNCTION create_comment_notification();
 -- ============================================
 -- FIN DEL SCRIPT DE ACTUALIZACIÓN
 -- ============================================
+
+-- ============================================
+-- ADICIONES: PRESENCE, RETWEETS, MEDIA, POLLS, 2FA
+-- ============================================
+
+-- Presence (online status)
+CREATE TABLE IF NOT EXISTS presence (
+  user_id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  status VARCHAR(20) DEFAULT 'offline',
+  last_seen TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::TEXT, NOW())
+);
+
+CREATE INDEX IF NOT EXISTS idx_presence_last_seen ON presence(last_seen DESC);
+
+-- Retweets / Shares
+CREATE TABLE IF NOT EXISTS retweets (
+  id BIGSERIAL PRIMARY KEY,
+  post_id BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::TEXT, NOW()),
+  UNIQUE(post_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_retweets_post_id ON retweets(post_id);
+
+-- Media en posts (videos/imagenes múltiples)
+CREATE TABLE IF NOT EXISTS media (
+  id BIGSERIAL PRIMARY KEY,
+  post_id BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  media_type VARCHAR(20) DEFAULT 'image', -- image, video, gif
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::TEXT, NOW())
+);
+
+CREATE INDEX IF NOT EXISTS idx_media_post_id ON media(post_id);
+
+-- Polls
+CREATE TABLE IF NOT EXISTS polls (
+  id BIGSERIAL PRIMARY KEY,
+  post_id BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  question TEXT NOT NULL,
+  multiple BOOLEAN DEFAULT FALSE,
+  expires_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::TEXT, NOW())
+);
+
+CREATE TABLE IF NOT EXISTS poll_options (
+  id BIGSERIAL PRIMARY KEY,
+  poll_id BIGINT NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
+  option_text TEXT NOT NULL,
+  votes_count INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS poll_votes (
+  id BIGSERIAL PRIMARY KEY,
+  poll_id BIGINT NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
+  option_id BIGINT NOT NULL REFERENCES poll_options(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::TEXT, NOW()),
+  UNIQUE(poll_id, user_id, option_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_polls_post_id ON polls(post_id);
+CREATE INDEX IF NOT EXISTS idx_poll_votes_poll_id ON poll_votes(poll_id);
+
+-- 2FA (almacenar estado y secreto; ver nota)
+CREATE TABLE IF NOT EXISTS user_2fa (
+  user_id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  secret TEXT,
+  enabled BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::TEXT, NOW())
+);
+
+-- ============================================
+-- FUNCIONES: retweets, polls, presence, media y 2FA (placeholders donde aplica)
+-- ============================================
+
+-- Toggle retweet (similar a toggle_like)
+CREATE OR REPLACE FUNCTION toggle_retweet(p_post_id BIGINT)
+RETURNS TABLE(retweeted BOOLEAN, retweets_count INTEGER) AS $$
+DECLARE
+  v_user_id UUID;
+  v_exists BOOLEAN;
+  v_count INTEGER;
+BEGIN
+  v_user_id := AUTH.UID();
+  v_exists := EXISTS(SELECT 1 FROM retweets WHERE post_id = p_post_id AND user_id = v_user_id);
+  IF v_exists THEN
+    DELETE FROM retweets WHERE post_id = p_post_id AND user_id = v_user_id;
+  ELSE
+    INSERT INTO retweets(post_id, user_id) VALUES(p_post_id, v_user_id);
+  END IF;
+  v_count := (SELECT COUNT(*) FROM retweets WHERE post_id = p_post_id);
+  UPDATE posts SET retweets_count = COALESCE(retweets_count,0) + 0 WHERE id = p_post_id; -- ensure column exists/kept
+  RETURN QUERY SELECT NOT v_exists, v_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Update presence
+CREATE OR REPLACE FUNCTION update_presence(p_status TEXT)
+RETURNS VOID AS $$
+DECLARE
+  v_user_id UUID := AUTH.UID();
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  INSERT INTO presence(user_id, status, last_seen)
+  VALUES(v_user_id, p_status, timezone('utc'::text, now()))
+  ON CONFLICT (user_id) DO UPDATE SET status = EXCLUDED.status, last_seen = EXCLUDED.last_seen;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create poll and options
+CREATE OR REPLACE FUNCTION create_poll(p_post_id BIGINT, p_question TEXT, p_options TEXT[], p_multiple BOOLEAN DEFAULT FALSE, p_expires_at TIMESTAMP WITH TIME ZONE DEFAULT NULL)
+RETURNS BIGINT AS $$
+DECLARE
+  v_poll_id BIGINT;
+  i INT;
+BEGIN
+  INSERT INTO polls(post_id, question, multiple, expires_at) VALUES(p_post_id, p_question, p_multiple, p_expires_at) RETURNING id INTO v_poll_id;
+  IF array_length(p_options,1) IS NOT NULL THEN
+    FOR i IN 1..array_length(p_options,1) LOOP
+      INSERT INTO poll_options(poll_id, option_text) VALUES(v_poll_id, p_options[i]);
+    END LOOP;
+  END IF;
+  RETURN v_poll_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Vote in poll (single choice implementation)
+CREATE OR REPLACE FUNCTION vote_poll(p_poll_id BIGINT, p_option_id BIGINT)
+RETURNS VOID AS $$
+DECLARE
+  v_user_id UUID := AUTH.UID();
+  v_poll_record RECORD;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  SELECT * INTO v_poll_record FROM polls WHERE id = p_poll_id;
+  IF v_poll_record IS NULL THEN
+    RAISE EXCEPTION 'Poll not found';
+  END IF;
+  -- remove previous votes by user for this poll
+  DELETE FROM poll_votes pv USING poll_options po WHERE pv.option_id = po.id AND po.poll_id = p_poll_id AND pv.user_id = v_user_id;
+  -- insert new vote
+  INSERT INTO poll_votes(poll_id, option_id, user_id) VALUES(p_poll_id, p_option_id, v_user_id) ON CONFLICT DO NOTHING;
+  -- recompute votes_count
+  UPDATE poll_options SET votes_count = (SELECT COUNT(*) FROM poll_votes WHERE option_id = poll_options.id) WHERE poll_id = p_poll_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create media record for an uploaded file
+CREATE OR REPLACE FUNCTION create_media_entry(p_post_id BIGINT, p_url TEXT, p_media_type TEXT DEFAULT 'image')
+RETURNS BIGINT AS $$
+DECLARE
+  v_id BIGINT;
+BEGIN
+  INSERT INTO media(post_id, url, media_type) VALUES(p_post_id, p_url, p_media_type) RETURNING id INTO v_id;
+  RETURN v_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 2FA management (store secret; verification should be implemented in server/backend)
+CREATE OR REPLACE FUNCTION enable_2fa(p_secret TEXT)
+RETURNS VOID AS $$
+DECLARE
+  v_user_id UUID := AUTH.UID();
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  INSERT INTO user_2fa(user_id, secret, enabled) VALUES(v_user_id, p_secret, TRUE)
+  ON CONFLICT (user_id) DO UPDATE SET secret = EXCLUDED.secret, enabled = TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION disable_2fa()
+RETURNS VOID AS $$
+DECLARE
+  v_user_id UUID := AUTH.UID();
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  UPDATE user_2fa SET enabled = FALSE WHERE user_id = v_user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Note: TOTP verification is not implemented in SQL here. Use server-side verification (e.g., using otplib) or edge functions.
+
