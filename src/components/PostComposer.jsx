@@ -15,14 +15,38 @@ export default function PostComposer({ user, onPosted, compact = false }) {
     if (!content.trim()) return
 
     setLoading(true)
-    const { error } = await supabase.from('posts').insert([
-      { content: content.trim(), author_id: user.id },
-    ])
-    setLoading(false)
-    if (error) return alert(error.message)
+    try {
+      // Ensure profile exists before posting
+      const { data: profileExists } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single()
 
-    setContent('')
-    onPosted && onPosted()
+      if (!profileExists) {
+        // Create profile if it doesn't exist
+        const { error: profileError } = await supabase.from('profiles').insert([
+          { id: user.id, username: user.email?.split('@')[0] || 'user' },
+        ])
+        if (profileError && !profileError.message.includes('duplicate')) {
+          throw profileError
+        }
+      }
+
+      // Now insert the post
+      const { error } = await supabase.from('posts').insert([
+        { content: content.trim(), author_id: user.id },
+      ])
+      if (error) throw error
+
+      setContent('')
+      onPosted && onPosted()
+    } catch (err) {
+      console.error('Error publishing post:', err)
+      alert(err.message || 'Error al publicar')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
