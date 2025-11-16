@@ -1,8 +1,9 @@
 import './App.css';
+import './styles/timeline.css';
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Layout from './components/Layout'
-import Timeline from './components/Timeline'
+import TimelineNew from './components/TimelineNew'
 import DebugBar from './components/DebugBar'
 import LandingPage from './pages/LandingPage'
 import RequireAuth from './components/RequireAuth'
@@ -36,7 +37,7 @@ function App() {
       <Layout page={page} setPage={setPage} user={user} onLogout={handleLogout}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/feed" element={<RequireAuth><Timeline onOpenProfile={(id) => { setPage('profile'); }} /></RequireAuth>} />
+          <Route path="/feed" element={<RequireAuth><TimelineNew onOpenProfile={(id) => { setPage('profile'); }} /></RequireAuth>} />
           <Route path="/search" element={<SearchPage onProfile={(id) => { setPage('profile'); }} />} />
           <Route path="/bookmarks" element={<RequireAuth><BookmarksPage /></RequireAuth>} />
           <Route path="/notifications" element={<RequireAuth><NotificationsPage user={user} /></RequireAuth>} />

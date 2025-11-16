@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import supabase from '../supabase'
-import { MessageCircle, Repeat, Heart, Share2, RefreshCw, AlertCircle } from 'lucide-react'
+import { MessageCircle, Repeat, Heart, Share2, RefreshCw, AlertCircle, Sparkles, TrendingUp, Clock } from 'lucide-react'
 import Post from './Post'
 import { logger } from '../utils/logger'
 import { fetchPublicPosts, fetchUserTimeline, getAuthUser, normalizePostData } from '../utils/supabaseHelpers'
@@ -13,6 +13,8 @@ export default function Timeline({ onOpenProfile }) {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [viewMode, setViewMode] = useState('latest') // 'latest', 'trending', 'following'
+  const [sortBy, setSortBy] = useState('recent')
 
   const fetchPosts = async () => {
     try {
@@ -100,76 +102,139 @@ export default function Timeline({ onOpenProfile }) {
   }, [])
 
   return (
-    <div className="w-full bg-white dark:bg-twitter-900 border-r border-gray-200 dark:border-twitter-800">
-      {/* Header con botón de refresh */}
-      <div className="sticky top-16 md:top-20 z-40 bg-white dark:bg-twitter-900 border-b border-gray-200 dark:border-twitter-800 backdrop-blur-sm bg-opacity-80 dark:bg-opacity-80 p-4 flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-          Timeline {isAuthenticated && <span className="text-xs text-gray-500">(personalizado)</span>}
-        </h2>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className={`p-2 rounded-full transition-all duration-300 hover:bg-gray-100 dark:hover:bg-twitter-800 ${
-            refreshing ? 'animate-spin' : 'hover:scale-110'
-          }`}
-          title="Actualizar timeline"
-        >
-          <RefreshCw size={20} className="text-gray-600 dark:text-gray-300 hover:text-twitter-600 dark:hover:text-twitter-400" />
-        </button>
+    <div className="w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-950 dark:to-gray-900 min-h-screen border-r border-gray-200 dark:border-gray-800">
+      {/* Hero Header */}
+      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="max-w-2xl mx-auto px-4 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+              ✨
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Timeline</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {isAuthenticated ? 'Feed Personalizado' : 'Descubre Posts'}
+              </p>
+            </div>
+          </div>
+          
+          {/* Refresh Button */}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group"
+            title="Actualizar"
+          >
+            <RefreshCw
+              size={20}
+              className={`text-gray-600 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-all ${
+                refreshing ? 'animate-spin' : ''
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* View Mode Selector */}
+        <div className="max-w-2xl mx-auto px-4 pb-4 flex gap-2 overflow-x-auto border-t border-gray-200 dark:border-gray-800 pt-3">
+          {[
+            { id: 'latest', label: 'Últimos', icon: Clock },
+            { id: 'trending', label: 'Tendencia', icon: TrendingUp },
+            ...(isAuthenticated ? [{ id: 'following', label: 'Siguiendo', icon: Sparkles }] : [])
+          ].map(mode => {
+            const Icon = mode.icon
+            return (
+              <button
+                key={mode.id}
+                onClick={() => setViewMode(mode.id)}
+                className={`px-4 py-2 rounded-full whitespace-nowrap flex items-center gap-2 transition-all font-medium text-sm ${
+                  viewMode === mode.id
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Icon size={16} />
+                {mode.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <div className="m-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex gap-3">
-          <AlertCircle size={20} className="text-red-600 dark:text-red-400 flex-shrink-0" />
+        <div className="max-w-2xl mx-auto m-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl flex gap-3 animate-slide-in-down">
+          <AlertCircle size={20} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-red-800 dark:text-red-300">Error</p>
+            <p className="font-semibold text-red-800 dark:text-red-300">Error al cargar posts</p>
             <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+            <button
+              onClick={handleRefresh}
+              className="mt-2 text-sm font-medium text-red-600 dark:text-red-400 hover:underline"
+            >
+              Intentar de nuevo
+            </button>
           </div>
         </div>
       )}
 
-      {/* Loading state */}
+      {/* Loading State */}
       {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin">
-            <span className="text-4xl">🔄</span>
+        <div className="flex items-center justify-center py-16">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative w-12 h-12">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-spin" style={{ backgroundSize: '200% 200%' }}></div>
+              <div className="absolute inset-1 bg-white dark:bg-gray-950 rounded-full flex items-center justify-center">
+                <span className="text-xl">📱</span>
+              </div>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Cargando posts...</p>
           </div>
         </div>
       )}
 
-      {/* Posts list */}
-      <div className="divide-y divide-gray-200 dark:divide-twitter-800">
-        {/* skeleton if loading */}
-        {loading && (
-          <div className="p-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-gray-100 dark:bg-twitter-800 rounded-md p-4 mb-4 animate-pulse-subtle">
-                <div className="h-4 w-1/4 bg-gray-200 dark:bg-twitter-700 rounded mb-2"></div>
-                <div className="h-6 w-full bg-gray-200 dark:bg-twitter-700 rounded"></div>
-              </div>
-            ))}
-          </div>
-        )}
-        {posts.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center py-12 px-4 animate-slide-in-up">
-            <span className="text-4xl mb-3">📝</span>
-            <p className="text-gray-600 dark:text-gray-400 text-center">
-              No hay posts todavía. ¡Sé el primero en publicar!
+      {/* Posts Feed */}
+      <div className="max-w-2xl mx-auto">
+        {!loading && posts.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 px-4">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500/10 to-purple-600/10 rounded-full flex items-center justify-center mb-4">
+              <span className="text-4xl">📝</span>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No hay posts aún</h3>
+            <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
+              {isAuthenticated
+                ? 'Sigue a más usuarios para ver su contenido'
+                : 'Inicia sesión para ver posts de usuarios que sigues'}
             </p>
-            {error && (
-              <p className="text-sm text-red-500 mt-2">
-                Intenta recargar la página o revisar tu conexión
-              </p>
+            {!isAuthenticated && (
+              <button className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium transition-all hover:shadow-lg">
+                Inicia Sesión
+              </button>
             )}
           </div>
         )}
 
-        {posts.map((p, idx) => (
-          <div key={p.id} style={{ animationDelay: `${idx * 50}ms` }} className="animate-fade-in">
-            <Post post={p} onOpenProfile={() => onOpenProfile && onOpenProfile(p.author?.username || p.author?.id)} />
+        {/* Posts Grid */}
+        <div className="divide-y divide-gray-200 dark:divide-gray-800">
+          {posts.map((post, idx) => (
+            <div
+              key={post.id}
+              style={{ animationDelay: `${idx * 30}ms` }}
+              className="animate-fade-in transition-all hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
+            >
+              <Post
+                post={post}
+                onOpenProfile={() => onOpenProfile && onOpenProfile(post.author?.username || post.author?.id)}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Load More Indicator */}
+        {!loading && posts.length > 0 && (
+          <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+            {posts.length} posts cargados
           </div>
-        ))}
+        )}
       </div>
     </div>
   )
