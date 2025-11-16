@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Layout from './components/Layout'
 import Timeline from './components/Timeline'
+import DebugBar from './components/DebugBar'
 import LandingPage from './pages/LandingPage'
 import RequireAuth from './components/RequireAuth'
 import SearchPage from './pages/SearchPage'
@@ -50,6 +51,7 @@ function App() {
           <Route path="*" element={<div className="p-8 text-center">Página no encontrada</div>} />
         </Routes>
       </Layout>
+      <DebugBar />
     </BrowserRouter>
   )
 }
