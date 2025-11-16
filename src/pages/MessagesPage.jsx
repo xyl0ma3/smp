@@ -13,9 +13,13 @@ export default function MessagesPage() {
   const [totalUnread, setTotalUnread] = useState(0);
 
   useEffect(() => {
+    // Wait until auth finishes and we have a user
+    if (!user) return;
+
     loadConversations();
-    subscribeToConversations();
-  }, []);
+    const cleanup = subscribeToConversations();
+    return cleanup;
+  }, [user]);
 
   const loadConversations = async () => {
     try {
@@ -35,8 +39,11 @@ export default function MessagesPage() {
   };
 
   const subscribeToConversations = () => {
+    if (!user) return () => {}
+
+    const channelName = `conversations:${user.id}`
     const subscription = supabase
-      .channel(`conversations:${user.id}`)
+      .channel(channelName)
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'conversations' },
         (payload) => {
@@ -46,7 +53,11 @@ export default function MessagesPage() {
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      try {
+        subscription.unsubscribe();
+      } catch (e) {
+        // ignore unsubscribe errors
+      }
     };
   };
 
