@@ -79,13 +79,13 @@ CREATE POLICY verifications_insert_by_owner ON verifications
 CREATE POLICY verifications_select_owner ON verifications
   FOR SELECT
   TO public
-  USING (auth.uid()::uuid = user_id OR EXISTS (SELECT 1 FROM user_roles ur WHERE ur.id::text = auth.uid() AND ur.role = 'admin'));
+  USING (auth.uid()::uuid = user_id OR EXISTS (SELECT 1 FROM user_roles ur WHERE ur.id = auth.uid()::uuid AND ur.role = 'admin'));
 
 -- Allow admins to update verification status
 CREATE POLICY verifications_update_admin ON verifications
   FOR UPDATE
   TO public
-  USING (EXISTS (SELECT 1 FROM user_roles ur WHERE ur.id::text = auth.uid() AND ur.role = 'admin'));
+  USING (EXISTS (SELECT 1 FROM user_roles ur WHERE ur.id = auth.uid()::uuid AND ur.role = 'admin'));
 
 -- Note: This script assumes a `user_roles` table with id (uuid) and role (text)
 -- Run this migration in Supabase SQL editor. If `gen_random_uuid()` is not available, enable pgcrypto extension or replace with uuid_generate_v4().
