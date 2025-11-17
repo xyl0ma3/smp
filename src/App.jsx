@@ -23,6 +23,9 @@ const MessagesPageV2 = lazy(() => import('./pages/MessagesPageV2'))
 const BookmarksPage = lazy(() => import('./pages/BookmarksPage'))
 const CreatePost = lazy(() => import('./pages/CreatePost'))
 const Ping = lazy(() => import('./pages/Ping'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
+const TermsOfService = lazy(() => import('./pages/TermsOfService'))
+const CookiePolicy = lazy(() => import('./pages/CookiePolicy'))
 
 function App() {
   const { user } = useAuth()
@@ -70,19 +73,15 @@ function App() {
           } />
           
           <Route path="/@:username" element={
-            <RequireAuth>
-              <Suspense fallback={<LoadingSpinner />}>
-                <ProfilePageV2 />
-              </Suspense>
-            </RequireAuth>
+            <Suspense fallback={<LoadingSpinner />}>
+              <ProfilePageV2 />
+            </Suspense>
           } />
           
           <Route path="/profile/:username" element={
-            <RequireAuth>
-              <Suspense fallback={<LoadingSpinner />}>
-                <ProfilePageV2 />
-              </Suspense>
-            </RequireAuth>
+            <Suspense fallback={<LoadingSpinner />}>
+              <ProfilePageV2 />
+            </Suspense>
           } />
           
           <Route path="/compose" element={
@@ -115,6 +114,24 @@ function App() {
           <Route path="/ping" element={
             <Suspense fallback={<LoadingSpinner />}>
               <Ping />
+            </Suspense>
+          } />
+          
+          <Route path="/privacy" element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <PrivacyPolicy />
+            </Suspense>
+          } />
+          
+          <Route path="/terms" element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <TermsOfService />
+            </Suspense>
+          } />
+          
+          <Route path="/cookies" element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <CookiePolicy />
             </Suspense>
           } />
           

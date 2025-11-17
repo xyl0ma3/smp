@@ -32,11 +32,11 @@ export default function ProfilePageV2() {
       // Decode username (handle special characters)
       const decodedUsername = decodeURIComponent(username)
       
-      // Get user by username or id
+      // Get user by username
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .or(`username.eq.${decodedUsername},id.eq.${username}`)
+        .eq('username', decodedUsername)
         .single()
       
       if (userError) throw userError

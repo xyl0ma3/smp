@@ -229,9 +229,9 @@ export default function LandingPageV2() {
             <div>
               <h4 className="font-semibold text-white mb-4">Legal</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition">Privacidad</a></li>
-                <li><a href="#" className="hover:text-white transition">Términos</a></li>
-                <li><a href="#" className="hover:text-white transition">Cookies</a></li>
+                <li><a href="/privacy" className="hover:text-white transition">Privacidad</a></li>
+                <li><a href="/terms" className="hover:text-white transition">Términos</a></li>
+                <li><a href="/cookies" className="hover:text-white transition">Cookies</a></li>
               </ul>
             </div>
             <div>
