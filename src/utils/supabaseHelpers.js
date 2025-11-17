@@ -260,23 +260,40 @@ export async function fetchProfiles(limit = 20) {
  * Normalizar respuesta de posts (mapear profiles a author)
  */
 export function normalizePostData(posts) {
-  return (posts || []).map(post => ({
-    id: post.id,
-    content: post.content,
-    created_at: post.created_at,
-    image_url: post.image_url,
-    likes_count: post.likes_count || 0,
-    replies_count: post.replies_count || 0,
-    reposts_count: post.reposts_count || 0,
-    author_id: post.author_id,
-    author: post.profiles ? {
-      id: post.profiles.id,
-      username: post.profiles.username,
-      avatar_url: post.profiles.avatar_url,
-      verified: post.profiles.verified
-    } : post.author,
-    liked_by_user: post.liked_by_user || false
-  }))
+  return (posts || []).map(post => {
+    // Debug: log si hay problemas de estructura
+    if (!post.content) {
+      logger.debug(SUPABASE_TAG, 'Post sin contenido detectado', { postId: post.id, post })
+    }
+    
+    return {
+      id: post.id,
+      content: post.content || '',
+      created_at: post.created_at,
+      image_url: post.image_url,
+      likes_count: post.likes_count || 0,
+      replies_count: post.replies_count || 0,
+      reposts_count: post.reposts_count || 0,
+      author_id: post.author_id,
+      author: post.profiles ? {
+        id: post.profiles.id,
+        username: post.profiles.username,
+        avatar_url: post.profiles.avatar_url,
+        verified: post.profiles.verified
+      } : post.author ? {
+        id: post.author.id,
+        username: post.author.username,
+        avatar_url: post.author.avatar_url,
+        verified: post.author.verified
+      } : {
+        id: post.author_id,
+        username: 'Usuario Desconocido',
+        avatar_url: null,
+        verified: false
+      },
+      liked_by_user: post.liked_by_user || false
+    }
+  })
 }
 
 export default {

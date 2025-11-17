@@ -56,6 +56,16 @@ export default function Timeline({ onOpenProfile }) {
       const normalized = normalizePostData(result.data)
       logger.info(TAG, `Posts cargados correctamente`, { count: normalized.length, isAuthenticated: !!user })
       
+      // Debug: mostrar primer post para verificar estructura
+      if (normalized.length > 0) {
+        logger.debug(TAG, 'Primer post estructura:', { 
+          id: normalized[0].id,
+          content: normalized[0].content ? `${normalized[0].content.substring(0, 50)}...` : '[SIN CONTENIDO]',
+          author: normalized[0].author,
+          image_url: !!normalized[0].image_url
+        })
+      }
+      
       setPosts(normalized)
       setError(null)
     } catch (e) {
