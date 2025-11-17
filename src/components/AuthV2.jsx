@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mail, Lock, User, Eye, EyeOff, Loader } from 'lucide-react'
-import { Button, Input, Alert } from '../base'
+import { Button, Input, Alert } from './base'
 import supabase from '../supabase'
-import { logger } from '../../utils/logger'
+import { logger } from '../utils/logger'
 
 /**
  * Componente Auth V2 - Mejorado con mejor UX

@@ -43,7 +43,6 @@ export default function NavbarV2({ user, onLogout }) {
               className="flex-shrink-0 font-bold text-xl text-blue-500 hover:text-blue-600 transition"
               title="Volver a inicio"
             >
-              {/* Logo */}
               <img src="/Octocat.png" alt="logo" className="h-8 w-auto" />
             </button>
 
@@ -105,7 +104,6 @@ export default function NavbarV2({ user, onLogout }) {
                       onClick={() => setUserMenuOpen(false)}
                     />
                     <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 z-20 overflow-hidden">
-                      {/* Profile Info */}
                       <div className="p-4 border-b border-gray-200 dark:border-gray-800">
                         <p className="font-semibold text-sm text-gray-900 dark:text-white">
                           {user.email?.split('@')[0] || 'Usuario'}
@@ -115,7 +113,6 @@ export default function NavbarV2({ user, onLogout }) {
                         </p>
                       </div>
 
-                      {/* Menu Items */}
                       <div className="py-2">
                         <button
                           onClick={() => {
@@ -125,9 +122,44 @@ export default function NavbarV2({ user, onLogout }) {
                           }}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 transition"
                         >
-                          <AvatarBase src={user.user_metadata?.avatar_url} alt="profile" size="xs" />
+                          <span>👤</span>
                           Mi Perfil
                         </button>
+
+                        <button
+                          onClick={() => {
+                            navigate('/notifications')
+                            setUserMenuOpen(false)
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 transition"
+                        >
+                          <Bell size={16} />
+                          Notificaciones
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            navigate('/messages')
+                            setUserMenuOpen(false)
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 transition"
+                        >
+                          <Mail size={16} />
+                          Mensajes
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            navigate('/bookmarks')
+                            setUserMenuOpen(false)
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 transition"
+                        >
+                          <Bookmark size={16} />
+                          Guardados
+                        </button>
+
+                        <div className="border-t border-gray-200 dark:border-gray-800 my-2" />
 
                         <button
                           onClick={() => {
@@ -138,6 +170,17 @@ export default function NavbarV2({ user, onLogout }) {
                         >
                           <Settings size={16} />
                           Configuración
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            navigate('/admin')
+                            setUserMenuOpen(false)
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 transition"
+                        >
+                          <Shield size={16} />
+                          Panel Admin
                         </button>
 
                         <div className="border-t border-gray-200 dark:border-gray-800 my-2" />
