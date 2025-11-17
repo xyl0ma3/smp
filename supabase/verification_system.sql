@@ -73,7 +73,6 @@ ALTER TABLE verifications ENABLE ROW LEVEL SECURITY;
 CREATE POLICY verifications_insert_by_owner ON verifications
   FOR INSERT
   TO public
-  USING (true)
   WITH CHECK (auth.uid()::uuid = user_id);
 
 -- Allow users to select their own verifications
