@@ -25,6 +25,51 @@ export default function ProfilePageV2() {
     fetchProfile()
   }, [username])
 
+  // Real-time updates for this profile's posts and user changes
+  useEffect(() => {
+    if (!profile?.id) return
+
+    const channel = supabase
+      .channel(`profile-${profile.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'posts', filter: `user_id=eq.${profile.id}` },
+        (payload) => {
+          setPosts((prev) => [payload.new, ...prev])
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'posts', filter: `user_id=eq.${profile.id}` },
+        (payload) => {
+          setPosts((prev) => prev.map((p) => (p.id === payload.new.id ? payload.new : p)))
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'posts', filter: `user_id=eq.${profile.id}` },
+        (payload) => {
+          setPosts((prev) => prev.filter((p) => p.id !== payload.old.id))
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${profile.id}` },
+        (payload) => {
+          setProfile((prev) => ({ ...prev, ...payload.new }))
+        }
+      )
+      .subscribe()
+
+    return () => {
+      try {
+        channel.unsubscribe()
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [profile?.id])
+
   const fetchProfile = async () => {
     try {
       setLoading(true)

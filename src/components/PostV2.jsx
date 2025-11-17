@@ -3,16 +3,20 @@ import { Heart, MessageCircle, Repeat2, Share, Bookmark, MoreHorizontal, Flag } 
 import { AvatarBase, Button } from './base'
 import { useNavigate } from 'react-router-dom'
 import { logger } from '../utils/logger'
+import useAuth from '../hooks/useAuth'
+import useLike from '../hooks/useLike'
 
 /**
  * Componente Post V2 - Rediseñado con mejor UX
  */
 export default function PostV2({ post, onOpenProfile }) {
   const navigate = useNavigate()
-  const [liked, setLiked] = useState(post?.liked_by_user || false)
+  const { user: currentUser } = useAuth()
   const [saved, setSaved] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
-  const [likes, setLikes] = useState(post?.likes_count || 0)
+
+  const { liked, likesCount, toggle } = useLike(post?.id, currentUser?.id)
+  const [likes, setLikes] = useState(post?.likes_count || likesCount || 0)
 
   if (!post) return null
 
@@ -32,9 +36,14 @@ export default function PostV2({ post, onOpenProfile }) {
     return date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })
   }
 
-  const toggleLike = () => {
-    setLiked(!liked)
-    setLikes(liked ? likes - 1 : likes + 1)
+  const toggleLike = async () => {
+    try {
+      await toggle()
+      // optimistic local update (use latest likesCount if available)
+      setLikes((prev) => (liked ? Math.max(0, prev - 1) : prev + 1))
+    } catch (err) {
+      console.error('Error like toggle', err)
+    }
   }
 
   return (
@@ -162,7 +171,7 @@ export default function PostV2({ post, onOpenProfile }) {
               <span className="text-xs">{post.retweets_count || 0}</span>
             </button>
 
-            <button
+              <button
               onClick={toggleLike}
               className={`flex items-center gap-2 px-3 py-2 rounded-full transition ${
                 liked
@@ -172,7 +181,7 @@ export default function PostV2({ post, onOpenProfile }) {
               title={liked ? 'Quitar like' : 'Me gusta'}
             >
               <Heart size={16} fill={liked ? 'currentColor' : 'none'} />
-              <span className="text-xs">{likes || 0}</span>
+              <span className="text-xs">{likes || likesCount || 0}</span>
             </button>
 
             <button
