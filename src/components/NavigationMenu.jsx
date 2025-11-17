@@ -17,9 +17,11 @@ import {
   Zap,
   HelpCircle,
   Moon,
-  Sun
+  Sun,
+  Shield
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import useIsAdmin from '../hooks/useIsAdmin'
 
 export default function NavigationMenu({ 
   user,
@@ -30,6 +32,7 @@ export default function NavigationMenu({
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const navigate = useNavigate()
+  const { isAdmin } = useIsAdmin()
 
   useEffect(() => {
     function onDoc(e) {
@@ -91,6 +94,12 @@ export default function NavigationMenu({
       label: 'Configuración', 
       action: () => { setPage('settings'); navigate('/settings'); setOpen(false) } 
     },
+    ...(isAdmin ? [{
+      icon: Shield,
+      label: 'Panel de Admin',
+      action: () => { navigate('/admin'); setOpen(false) },
+      admin: true
+    }] : []),
     { 
       icon: HelpCircle, 
       label: 'Ayuda', 
@@ -157,13 +166,20 @@ export default function NavigationMenu({
                   <button
                     key={index}
                     onClick={item.action}
-                    className="w-full px-4 py-3 text-left flex items-center gap-3 transition-all duration-200 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-twitter-800 group"
+                    className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-twitter-800 group ${
+                      item.admin 
+                        ? 'text-orange-600 dark:text-orange-400 border-y border-orange-200 dark:border-orange-900/30' 
+                        : 'text-gray-900 dark:text-white'
+                    }`}
                     title={item.label}
                   >
-                    <item.icon size={18} className="group-hover:text-twitter-600 dark:group-hover:text-twitter-400 transition-colors" />
-                    <span className="flex-1 font-medium text-sm group-hover:text-twitter-600 dark:group-hover:text-twitter-400 transition-colors">
+                    <item.icon size={18} className={`${item.admin ? 'text-orange-600 dark:text-orange-400' : 'group-hover:text-twitter-600 dark:group-hover:text-twitter-400'} transition-colors`} />
+                    <span className={`flex-1 font-medium text-sm ${item.admin ? 'font-semibold' : 'group-hover:text-twitter-600 dark:group-hover:text-twitter-400'} transition-colors`}>
                       {item.label}
                     </span>
+                    {item.admin && (
+                      <Shield size={14} className="text-orange-600 dark:text-orange-400" />
+                    )}
                   </button>
                 ))}
               </div>
