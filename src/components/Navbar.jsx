@@ -46,7 +46,24 @@ export default function Navbar({ user, setPage, onLogout }) {
           </button>
 
           <div className="flex items-center gap-2">
-            <button onClick={() => { if (!user) { navigate('/signup'); return } setPage('profile'); navigate(`/@${user.user_metadata?.username || user.email?.split('@')[0]}`) }} className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-twitter-800 transition-colors">
+            <button 
+              onClick={() => { 
+                if (!user) { 
+                  navigate('/signup')
+                  return 
+                }
+                // Obtener username con validación
+                const username = user.user_metadata?.username || user.email?.split('@')[0] || user.id
+                if (!username) {
+                  alert('No se pudo obtener tu username')
+                  return
+                }
+                setPage('profile')
+                navigate(`/@${encodeURIComponent(username)}`)
+              }} 
+              className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-twitter-800 transition-colors"
+              title={user ? `Perfil de ${user.email}` : 'Inicia sesión para ver tu perfil'}
+            >
               <User size={18} />
               <span className="hidden md:inline text-sm">{user?.email ? user.email.split('@')[0] : 'Perfil'}</span>
             </button>

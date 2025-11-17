@@ -87,7 +87,20 @@ export default function NavigationMenu({
     { 
       icon: User, 
       label: 'Mi Perfil', 
-      action: () => { if (!user) { navigate('/signup'); return } setPage('profile'); navigate(`/@${user.user_metadata?.username || user.email?.split('@')[0]}`); setOpen(false) } 
+      action: () => { 
+        if (!user) { 
+          navigate('/signup')
+          return 
+        }
+        const username = user.user_metadata?.username || user.email?.split('@')[0] || user.id
+        if (!username) {
+          alert('No se pudo obtener tu username')
+          return
+        }
+        setPage('profile')
+        navigate(`/@${encodeURIComponent(username)}`)
+        setOpen(false)
+      } 
     },
     { 
       icon: Settings, 
