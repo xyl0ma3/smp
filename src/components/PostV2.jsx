@@ -38,7 +38,7 @@ export default function PostV2({ post, onOpenProfile }) {
   }
 
   return (
-    <article className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors duration-150 cursor-pointer">
+    <article className="group border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors duration-150 cursor-pointer">
       <div className="p-4 md:p-5 flex gap-4">
         {/* Avatar */}
         <AvatarBase
@@ -145,7 +145,7 @@ export default function PostV2({ post, onOpenProfile }) {
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-between text-gray-500 dark:text-gray-400 max-w-xs md:max-w-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="flex items-center justify-between text-gray-500 dark:text-gray-400 max-w-full opacity-100 transition-opacity duration-200">
             <button
               className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-500 dark:hover:text-blue-400 transition"
               title="Responder"

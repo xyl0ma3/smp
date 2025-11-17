@@ -100,10 +100,10 @@ export default function NavbarV2({ user, onLogout }) {
                 {userMenuOpen && (
                   <>
                     <div
-                      className="fixed inset-0 z-10"
+                      className="fixed inset-0 z-40"
                       onClick={() => setUserMenuOpen(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 z-20 overflow-hidden">
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-800 z-50 overflow-hidden">
                       <div className="p-4 border-b border-gray-200 dark:border-gray-800">
                         <p className="font-semibold text-sm text-gray-900 dark:text-white">
                           {user.email?.split('@')[0] || 'Usuario'}

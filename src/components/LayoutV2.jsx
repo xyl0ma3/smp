@@ -24,8 +24,8 @@ export default function LayoutV2({ children, user, onLogout }) {
       {shouldShowNavbar && <NavbarV2 user={user} onLogout={onLogout} />}
 
       {/* Main Content */}
-      <main className={`${shouldShowNavbar ? 'pt-16' : ''} pb-20 md:pb-8`}>
-        <div className="w-full">
+      <main className={`${shouldShowNavbar ? 'pt-20 md:pt-16' : ''} pb-20 md:pb-8`}>
+        <div className="w-full min-h-screen">
           {children}
         </div>
       </main>
