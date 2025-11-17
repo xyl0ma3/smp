@@ -1,9 +1,10 @@
 import './App.css';
 import './styles/timeline.css';
+import './styles/design-system.css';
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import Layout from './components/Layout'
-import TimelineNew from './components/TimelineNew'
+import LayoutV2 from './components/LayoutV2'
+import TimelineV2 from './components/TimelineV2'
 import DebugBar from './components/DebugBar'
 import LandingPage from './pages/LandingPage'
 import RequireAuth from './components/RequireAuth'
@@ -23,22 +24,18 @@ import useAuth from './hooks/useAuth'
 
 function App() {
   const { user } = useAuth()
-  const [page, setPage] = useState('feed')
 
   const handleLogout = () => {
-    setUser(null)
-    setPage('feed')
+    // useAuth maneja el logout automáticamente
   }
-
-  // user is provided by useAuth
 
   return (
     <BrowserRouter>
-      <Layout page={page} setPage={setPage} user={user} onLogout={handleLogout}>
+      <LayoutV2 user={user} onLogout={handleLogout}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/feed" element={<RequireAuth><TimelineNew onOpenProfile={(id) => { setPage('profile'); }} /></RequireAuth>} />
-          <Route path="/search" element={<SearchPage onProfile={(id) => { setPage('profile'); }} />} />
+          <Route path="/feed" element={<RequireAuth><TimelineV2 onOpenProfile={(id) => {}} /></RequireAuth>} />
+          <Route path="/search" element={<SearchPage onProfile={(id) => {}} />} />
           <Route path="/bookmarks" element={<RequireAuth><BookmarksPage /></RequireAuth>} />
           <Route path="/notifications" element={<RequireAuth><NotificationsPage user={user} /></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth><SettingsPage user={user} /></RequireAuth>} />
@@ -47,11 +44,11 @@ function App() {
           <Route path="/compose" element={<RequireAuth><CreatePost user={user} onClose={() => window.history.back()} onPosted={() => window.history.back()} /></RequireAuth>} />
           <Route path="/messages" element={<RequireAuth><MessagesPage /></RequireAuth>} />
           <Route path="/admin" element={<RequireAuth><AdminPanel /></RequireAuth>} />
-          <Route path="/signup" element={<Auth onUser={(u) => { setUser(u); }} />} />
+          <Route path="/signup" element={<Auth onUser={(u) => {}} />} />
           <Route path="/ping" element={<Ping />} />
           <Route path="*" element={<div className="p-8 text-center">Página no encontrada</div>} />
         </Routes>
-      </Layout>
+      </LayoutV2>
       <DebugBar />
     </BrowserRouter>
   )
