@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu, X, Home, Search, Bell, Mail, Bookmark, Heart, Settings, LogOut, Shield, Plus } from 'lucide-react'
 import { Button, AvatarBase } from './base'
+import ComposePostV2 from './ComposePostV2'
 import supabase from '../supabase'
 
 /**
@@ -12,6 +13,7 @@ export default function NavbarV2({ user, onLogout }) {
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [composeOpen, setComposeOpen] = useState(false)
 
   const navItems = [
     { icon: Home, label: 'Inicio', href: '/feed', matches: ['/feed'] },
@@ -73,7 +75,7 @@ export default function NavbarV2({ user, onLogout }) {
             {user && (
               <Button
                 size="md"
-                onClick={() => navigate('/compose')}
+                onClick={() => setComposeOpen(true)}
                 className="hidden sm:inline-flex gap-2"
               >
                 <Plus size={18} />
@@ -194,6 +196,16 @@ export default function NavbarV2({ user, onLogout }) {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Compose Modal */}
+      {composeOpen && (
+        <ComposePostV2
+          onClose={() => setComposeOpen(false)}
+          onPosted={() => {
+            setComposeOpen(false)
+          }}
+        />
       )}
     </>
   )
