@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import LayoutV2 from './components/LayoutV2'
 import TimelineV2 from './components/TimelineV2'
 import DebugBar from './components/DebugBar'
-import LandingPage from './pages/LandingPage'
+import LandingPageV2 from './pages/LandingPageV2'
 import RequireAuth from './components/RequireAuth'
 import SearchPage from './pages/SearchPage'
 import NotificationsPage from './pages/NotificationsPage'
@@ -14,7 +14,7 @@ import SettingsPage from './pages/SettingsPage'
 import ProfilePage from './pages/ProfilePage'
 import CreatePost from './pages/CreatePost'
 import BookmarksPage from './pages/BookmarksPage'
-import Auth from './components/Auth'
+import AuthV2 from './components/AuthV2'
 import Ping from './pages/Ping'
 import MessagesPage from './pages/MessagesPage'
 import AdminPanel from './components/AdminPanel'
@@ -33,7 +33,7 @@ function App() {
     <BrowserRouter>
       <LayoutV2 user={user} onLogout={handleLogout}>
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<LandingPageV2 />} />
           <Route path="/feed" element={<RequireAuth><TimelineV2 onOpenProfile={(id) => {}} /></RequireAuth>} />
           <Route path="/search" element={<SearchPage onProfile={(id) => {}} />} />
           <Route path="/bookmarks" element={<RequireAuth><BookmarksPage /></RequireAuth>} />
@@ -44,7 +44,7 @@ function App() {
           <Route path="/compose" element={<RequireAuth><CreatePost user={user} onClose={() => window.history.back()} onPosted={() => window.history.back()} /></RequireAuth>} />
           <Route path="/messages" element={<RequireAuth><MessagesPage /></RequireAuth>} />
           <Route path="/admin" element={<RequireAuth><AdminPanel /></RequireAuth>} />
-          <Route path="/signup" element={<Auth onUser={(u) => {}} />} />
+          <Route path="/signup" element={<AuthV2 onUser={(u) => {}} />} />
           <Route path="/ping" element={<Ping />} />
           <Route path="*" element={<div className="p-8 text-center">Página no encontrada</div>} />
         </Routes>
