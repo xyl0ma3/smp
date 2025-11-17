@@ -64,20 +64,24 @@ export default function Post({ post, onOpenProfile }) {
       <div className="p-4 md:p-5 flex gap-4">
         {/* Avatar */}
         <div className="flex-shrink-0 relative">
-          <Avatar
-            src={post.author?.avatar_url}
-            alt={post.author?.username}
-            size={48}
-            onClick={() => {
-              const username = post.author?.username
-              if (onOpenProfile) onOpenProfile(username)
-              if (username) navigate(`/@${username}`)
-            }}
-            className="cursor-pointer hover:opacity-80 transition"
-          />
-          {showPreview && (
+          {post.author?.avatar_url ? (
+            <Avatar
+              src={post.author.avatar_url}
+              alt={post.author.username}
+              size={48}
+              onClick={() => {
+                const username = post.author?.username
+                if (onOpenProfile) onOpenProfile(username)
+                if (username) navigate(`/@${username}`)
+              }}
+              className="cursor-pointer hover:opacity-80 transition"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-gray-300 dark:bg-gray-700" />
+          )}
+          {showPreview && post.author?.id && (
             <div className="absolute left-16 top-0 z-50">
-              <ProfilePreview userId={post.author?.id} shortProfile={{ username: post.author?.username, avatar_url: post.author?.avatar_url }} />
+              <ProfilePreview userId={post.author.id} shortProfile={{ username: post.author?.username, avatar_url: post.author?.avatar_url }} />
             </div>
           )}
         </div>
@@ -92,7 +96,7 @@ export default function Post({ post, onOpenProfile }) {
               onMouseLeave={() => setShowPreview(false)}
             >
               <p className="font-bold text-sm md:text-base text-gray-900 dark:text-white group-hover/author:underline">
-                {post.author?.username || 'Usuario'}
+                {post.author?.username || 'Usuario Anónimo'}
               </p>
               {post.author?.verified && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-semibold">
@@ -100,7 +104,7 @@ export default function Post({ post, onOpenProfile }) {
                 </span>
               )}
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                @{(post.author?.username || '').toLowerCase()}
+                @{(post.author?.username || 'usuario').toLowerCase()}
               </span>
               <span className="text-sm text-gray-500 dark:text-gray-400">·</span>
               <span className="text-sm text-gray-500 dark:text-gray-400 hover:underline">
@@ -130,28 +134,34 @@ export default function Post({ post, onOpenProfile }) {
             </div>
           </div>
 
-          {/* Post Content */}
-          <div
-            className="mb-3 text-gray-900 dark:text-white text-sm md:text-base leading-normal cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition"
-            onClick={() => setViewerOpen(true)}
-          >
-            {!expanded && post.content && post.content.length > 300 ? (
-              <>
-                <p className="line-clamp-3">{post.content}</p>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setExpanded(true)
-                  }}
-                  className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 text-sm font-semibold mt-2 transition"
-                >
-                  Ver más
-                </button>
-              </>
-            ) : (
-              <p>{post.content}</p>
-            )}
-          </div>
+          {/* Post Content - ALWAYS SHOW */}
+          {post.content ? (
+            <div
+              className="mb-3 text-gray-900 dark:text-white text-sm md:text-base leading-normal cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition"
+              onClick={() => setViewerOpen(true)}
+            >
+              {!expanded && post.content.length > 300 ? (
+                <>
+                  <p className="line-clamp-3">{post.content}</p>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setExpanded(true)
+                    }}
+                    className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 text-sm font-semibold mt-2 transition"
+                  >
+                    Ver más
+                  </button>
+                </>
+              ) : (
+                <p>{post.content}</p>
+              )}
+            </div>
+          ) : (
+            <div className="mb-3 p-4 bg-gray-100 dark:bg-gray-800 rounded text-gray-500 dark:text-gray-400 text-sm italic">
+              [Post sin contenido]
+            </div>
+          )}
 
           {/* Image */}
           {post.image_url && (
